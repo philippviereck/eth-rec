@@ -44,7 +44,7 @@ def valid_duration(s):
         raise argparse.ArgumentTypeError(msg)
 
 
-def record(room, duration, outfile):
+def record(room, duration, outfile, file_format):
     print(f"{bcolors.FAIL}• recording{bcolors.ENDC}  > {outfile}.{file_format}")
     try:
         p = subprocess.Popen(
@@ -139,10 +139,10 @@ def main():
 
             if(i > start):
                 record(room, duration_str,
-                       f"{file_name}_{i}")
+                       f"{file_name}_{i}", file_format)
             else:
                 record(room, duration_str,
-                       _file_name)
+                       _file_name, file_format)
             i += 1
         else:
             break
