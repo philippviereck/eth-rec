@@ -1,10 +1,13 @@
 import argparse
+from glob import glob
 import signal
 import time
 import datetime
 import subprocess
 from uuid import uuid4
 import os
+
+do_exit = False
 
 
 def check_ffmpeg(hard):
@@ -45,12 +48,14 @@ def valid_duration(s):
 
 
 def record(room, duration, outfile, file_format):
+    global do_exit
     print(f"{bcolors.FAIL}• recording{bcolors.ENDC}  > {outfile}.{file_format}")
     try:
         p = subprocess.Popen(
             ['ffmpeg', '-i', f"https://oc-vp-livestreaming.ethz.ch/hls/{room}/index.m3u8", "-c", "copy", "-t", duration, "-loglevel", "24", f"{outfile}.{file_format}"])
         p.communicate()
     except(KeyboardInterrupt):
+        do_exit = True
         if p != None:
             p.send_signal(signal.SIGINT)
         print("(CTRL-C)")
@@ -64,7 +69,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Record an ETH Livestream - Using ffmpeg under the hood to download the HLS stream. The stream is openly available but sill copyrighted material!')
     parser.add_argument(
-        '--output_file', '-o', required=False, help="The output file - e.g. recording.mp4 or lecture.mkv (.mkv is recommended)", default=f"{uuid4()}.mkv")
+        '--output_file', '-o', required=False, help="The output file - e.g. recording.mp4 or lecture.mkv (.mkv is recommended, use VLC to view)", default=f"{uuid4()}.mkv")
     parser.add_argument('--room', "-r", type=str, required=True,
                         help=r"The lecture room - e.g. 'hg-f-7' (the room must support livestreaming)")
     parser.add_argument('--starttime', "-st", type=valid_time,
@@ -127,12 +132,18 @@ def main():
     while(datetime.datetime.now() < start_time_date):
         time.sleep(1)
 
-    while(True):
+    MAX_RESTART = 5
+    while(True and not do_exit):
         now = datetime.datetime.now()
         if now < (end_time_date - datetime.timedelta(seconds=2)):
             if(i > start):
                 print(
                     f"{bcolors.WARNING}[Warning] Stopped before desired end-time. Restarting...{bcolors.ENDC}")
+
+            if(i > MAX_RESTART):
+                print(
+                    f"{bcolors.WARNING}[Warning] Aborting. Max restart reached... there is probably something wrong with your arguments{bcolors.ENDC}")
+                break
 
             duration_str = (datetime.datetime.min +
                             (end_time_date - now + datetime.timedelta(seconds=1))).time().isoformat()
