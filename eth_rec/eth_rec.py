@@ -1,5 +1,5 @@
 import argparse
-from glob import glob
+from asyncio.subprocess import PIPE
 import signal
 import time
 import datetime
@@ -10,19 +10,13 @@ import os
 do_exit = False
 
 
-def check_ffmpeg(hard):
+def is_ffmpeg_installed():
     ffmpeg_available = True
     try:
         subprocess.check_output(['which', 'ffmpeg'])
     except Exception as e:
         ffmpeg_available = False
-    if not ffmpeg_available:
-        if hard:
-            raise FileNotFoundError(
-                "ffmpeg is required to be installed and in PATH")
-        else:
-            print(
-                f"{bcolors.FAIL}[Warning] ffmpeg is not installed on this system, but required for this script to work!{bcolors.ENDC}")
+    return ffmpeg_available
 
 
 class bcolors:
@@ -52,8 +46,17 @@ def record(room, duration, outfile, file_format):
     print(f"{bcolors.FAIL}• recording{bcolors.ENDC}  > {outfile}.{file_format}")
     try:
         p = subprocess.Popen(
-            ['ffmpeg', '-i', f"https://oc-vp-livestreaming.ethz.ch/hls/{room}/index.m3u8", "-c", "copy", "-t", duration, "-loglevel", "24", f"{outfile}.{file_format}"])
-        p.communicate()
+            ['ffmpeg', '-i', f"https://oc-vp-livestreaming.ethz.ch/hls/{room}/index.m3u8", "-c", "copy", "-t", duration, "-loglevel", "24", f"{outfile}.{file_format}"], stdout=PIPE, stderr=PIPE)
+        # p.communicate()
+        while True:
+            line = p.stdout.readline().decode("utf-8")
+            linerr = p.stderr.readline().decode("utf-8")
+            if(line):
+                print(f"[{datetime.datetime.now().time().isoformat()}] {line}")
+            else:
+                print(f"[{datetime.datetime.now().time().isoformat()}] {linerr}")
+            if not line and not linerr:
+                break
     except(KeyboardInterrupt):
         do_exit = True
         if p != None:
@@ -65,7 +68,12 @@ def main():
     print(
         f"{bcolors.FAIL}[INFO] DON'T ABUSE THIS TOOL. ALWAYS RESPECT THE COPYRIGHT! I AM NOT RESPONSIBLE FOR YOUR ACTIONS.{bcolors.ENDC}")
 
-    check_ffmpeg(False)
+    ffmpeg_available = is_ffmpeg_installed()
+
+    if not ffmpeg_available:
+        print(
+            f"{bcolors.FAIL}[Warning] ffmpeg is not installed on this system, but required for this script to work!{bcolors.ENDC}")
+
     parser = argparse.ArgumentParser(
         description='Record an ETH Livestream - Using ffmpeg under the hood to download the HLS stream. The stream is openly available but sill copyrighted material!')
     parser.add_argument(
@@ -82,7 +90,10 @@ def main():
                        help="The time at which the recording should stop - format HH:MM:SS (Set either duration or end-time)")
 
     args = parser.parse_args()
-    check_ffmpeg(True)
+
+    if not ffmpeg_available:
+        raise FileNotFoundError(
+            "ffmpeg is required to be installed and in PATH")
 
     room = args.room
     file_name = args.output_file.split(".")[0]
@@ -91,15 +102,11 @@ def main():
 
     if args.duration is not None:
         duration = args.duration.isoformat()
-        delta = datetime.timedelta(0, args.duration.second, 0, 0,
-                                   args.duration.minute, args.duration.hour)
-        end_time_date = datetime.datetime.combine(
-            datetime.datetime.now().date(), start_time_date.time()) + delta
+        end_time_date = get_endtime(args)
 
     elif args.endtime > start_time_date:
         end_time_date = args.endtime
-        duration = (datetime.datetime.min +
-                    (end_time_date - start_time_date)).time().isoformat()
+        duration = get_duration(args)
 
     else:
         raise ValueError(f"{args.endtime} must be after {start_time_date}")
@@ -157,3 +164,15 @@ def main():
             i += 1
         else:
             break
+
+
+def get_duration(args):
+    (datetime.datetime.min +
+     (args.endtime - args.starttime)).time().isoformat()
+
+
+def get_endtime(args):
+    delta = datetime.timedelta(0, args.duration.second, 0, 0,
+                               args.duration.minute, args.duration.hour)
+    return datetime.datetime.combine(
+        datetime.datetime.now().date(), args.starttime.time()) + delta
