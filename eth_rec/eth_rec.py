@@ -144,8 +144,8 @@ def main():
     print("recording room '%s' is scheduled to start at %s" %
           (room.replace("-", " ").upper(), start_time_date.strftime("%H:%M:%S")))
 
-    while(datetime.datetime.now() < start_time_date):
-        time.sleep(1)
+    if(start_time_date > datetime.datetime.now()):
+        time.sleep((start_time_date - datetime.datetime.now()).total_seconds())
 
     MAX_RESTART = 5
     while(True and not do_exit):
