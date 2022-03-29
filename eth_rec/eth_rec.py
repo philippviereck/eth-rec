@@ -10,12 +10,6 @@ import os
 do_exit = False
 
 
-def play_notification():
-    print('\007')
-    time.sleep(0.3)
-    print('\007')
-
-
 def is_ffmpeg_installed():
     ffmpeg_available = True
     try:
@@ -50,7 +44,6 @@ def valid_duration(s):
 def record(room, duration, outfile, file_format):
     global do_exit
     print(f"{bcolors.FAIL}• recording{bcolors.ENDC}  > {outfile}.{file_format}")
-    play_notification()
     try:
         p = subprocess.Popen(
             ['ffmpeg', '-i', f"https://oc-vp-livestreaming.ethz.ch/hls/{room}/index.m3u8", "-c", "copy", "-t", duration, "-loglevel", "24", f"{outfile}.{file_format}"], stdout=PIPE, stderr=PIPE)
@@ -64,7 +57,6 @@ def record(room, duration, outfile, file_format):
                 print(f"[{datetime.datetime.now().time().isoformat()}] {linerr}")
             if not line and not linerr:
                 break
-        play_notification()
     except(KeyboardInterrupt):
         do_exit = True
         if p != None:
