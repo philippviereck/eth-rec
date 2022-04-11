@@ -6,6 +6,7 @@ import datetime
 import subprocess
 from uuid import uuid4
 import os
+import platform
 
 do_exit = False
 
@@ -17,6 +18,17 @@ def is_ffmpeg_installed():
     except Exception as e:
         ffmpeg_available = False
     return ffmpeg_available
+
+
+CMD = '''
+on run argv
+  display notification (item 2 of argv) with title (item 1 of argv)
+end run
+'''
+
+
+def notify(title, text):
+    subprocess.call(['osascript', '-e', CMD, title, text])
 
 
 class bcolors:
@@ -42,6 +54,9 @@ def valid_duration(s):
 
 
 def record(room, duration, outfile, file_format):
+    if(platform.system() == "Darwin"):
+        notify("Recording started", f"Recording to '{outfile}.{file_format}'")
+
     global do_exit
     print(f"{bcolors.FAIL}• recording{bcolors.ENDC}  > {outfile}.{file_format}")
     try:
