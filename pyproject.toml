@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "eth-rec"
-version = "0.1.2.4"
+version = "0.1.2.5"
 description = "Download ETH-Livestream"
 authors = ["Your Name <you@example.com>"]
 
