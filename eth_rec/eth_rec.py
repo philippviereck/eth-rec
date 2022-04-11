@@ -28,7 +28,8 @@ end run
 
 
 def notify(title, text):
-    subprocess.call(['osascript', '-e', CMD, title, text])
+    if(platform.system() == "Darwin"):
+        subprocess.call(['osascript', '-e', CMD, title, text])
 
 
 class bcolors:
@@ -54,8 +55,7 @@ def valid_duration(s):
 
 
 def record(room, duration, outfile, file_format):
-    if(platform.system() == "Darwin"):
-        notify("Recording started", f"Recording to '{outfile}.{file_format}'")
+    notify("Recording started", f"Recording to '{outfile}.{file_format}'")
 
     global do_exit
     print(f"{bcolors.FAIL}• recording{bcolors.ENDC}  > {outfile}.{file_format}")
@@ -179,6 +179,7 @@ def main():
             i += 1
         else:
             break
+    notify("Recording finished", "The recording has finished")
 
 
 def get_duration(args):
